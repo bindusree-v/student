@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useLearning } from '../context/LearningContext';
+import { createAssessment, getTopics } from '../api';
 
 export const AssignAssessment = () => {
-  const { apiBaseUrl } = useLearning();
   const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -27,8 +26,8 @@ export const AssignAssessment = () => {
 
   const fetchTopics = async () => {
     try {
-      const response = await fetch(`${apiBaseUrl}/api/v1/topics`);
-      const data = await response.json();
+      const response = await getTopics();
+      const data = response.data;
       setTopics(data.topics || []);
     } catch (error) {
       console.error('Error fetching topics:', error);
@@ -94,32 +93,21 @@ export const AssignAssessment = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`${apiBaseUrl}/api/v1/assessments/create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+      await createAssessment(formData);
+      alert('Assessment created successfully!');
+      setFormData({
+        title: '',
+        description: '',
+        topic_id: '',
+        assessment_type: 'quiz',
+        passing_score: 70,
+        time_limit_minutes: 30,
+        questions: []
       });
-
-      if (response.ok) {
-        alert('Assessment created successfully!');
-        setFormData({
-          title: '',
-          description: '',
-          topic_id: '',
-          assessment_type: 'quiz',
-          passing_score: 70,
-          time_limit_minutes: 30,
-          questions: []
-        });
-      } else {
-        const error = await response.json();
-        alert(`Error: ${error.detail || 'Failed to create assessment'}`);
-      }
     } catch (error) {
       console.error('Error creating assessment:', error);
-      alert('Failed to create assessment');
+      const message = error?.response?.data?.detail || error?.message || 'Failed to create assessment';
+      alert(`Error: ${message}`);
     } finally {
       setLoading(false);
     }

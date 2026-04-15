@@ -4,6 +4,8 @@ import { getStudentDashboard, getTeacherDashboard } from '../api';
 const LearningContext = createContext();
 
 export const LearningProvider = ({ children }) => {
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
   // Auth state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authMode, setAuthMode] = useState('login');
@@ -191,6 +193,7 @@ export const LearningProvider = ({ children }) => {
         fetchStudentDashboard,
         fetchTeacherDashboard,
         switchRole,
+        apiBaseUrl,
 
         // Navigation
         currentPage,

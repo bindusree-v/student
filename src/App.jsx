@@ -131,6 +131,25 @@ function AppContent() {
 
 function TeacherViewContent() {
   const [activeTab, setActiveTab] = React.useState('overview');
+  const [cohortFilters, setCohortFilters] = React.useState(() => {
+    try {
+      const saved = localStorage.getItem('teacherCohortFilters');
+      if (!saved) {
+        return { selectedTopic: 'all', masteryRange: 'all' };
+      }
+      const parsed = JSON.parse(saved);
+      return {
+        selectedTopic: parsed?.selectedTopic || 'all',
+        masteryRange: parsed?.masteryRange || 'all',
+      };
+    } catch {
+      return { selectedTopic: 'all', masteryRange: 'all' };
+    }
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('teacherCohortFilters', JSON.stringify(cohortFilters));
+  }, [cohortFilters]);
 
   return (
     <div className="space-y-6">
@@ -178,7 +197,18 @@ function TeacherViewContent() {
       </div>
 
       {activeTab === 'overview' && <TeacherDashboard />}
-      {activeTab === 'cohort' && <CohortView />}
+      {activeTab === 'cohort' && (
+        <CohortView
+          selectedTopic={cohortFilters.selectedTopic}
+          masteryRange={cohortFilters.masteryRange}
+          onSelectedTopicChange={(value) => {
+            setCohortFilters((prev) => ({ ...prev, selectedTopic: value }));
+          }}
+          onMasteryRangeChange={(value) => {
+            setCohortFilters((prev) => ({ ...prev, masteryRange: value }));
+          }}
+        />
+      )}
       {activeTab === 'assessments' && <AssignAssessment />}
       {activeTab === 'videos' && <UploadVideo />}
     </div>

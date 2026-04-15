@@ -1,11 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookOpen, ClipboardList, CheckCircle2, Clock, Volume2, Lightbulb, MessageCircle, ChevronRight, Maximize2, ChevronLeft } from 'lucide-react';
+import TopicVideos from './TopicVideos';
+import VideoPlayer from './VideoPlayer';
 
 export default function StudyPage({ course, topic, onBack }) {
   const [activeTab, setActiveTab] = useState('lesson');
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState(null);
+
+  // Extract topic code for video fetching
+  const getTopicCode = () => {
+    if (!topic) return null;
+    const title = (topic.title || '').toLowerCase();
+    // Map common topic names to topic codes
+    if (title.includes('language model') || title.includes('llm')) return 'lm';
+    if (title.includes('nlp') || title.includes('natural language')) return 'nlp';
+    if (title.includes('data') || title.includes('analysis')) return 'da';
+    return null;
+  };
+
+  const topicCode = getTopicCode();
 
   const lessons = [
     {
@@ -365,27 +381,73 @@ export default function StudyPage({ course, topic, onBack }) {
 
           {/* Resources Tab */}
           {activeTab === 'resources' && (
-            <div className="space-y-4">
-              {[
-                { title: 'Official Documentation', type: 'link', icon: '📖' },
-                { title: 'Video Tutorials', type: 'video', icon: '🎥' },
-                { title: 'Code Examples', type: 'code', icon: '💻' },
-                { title: 'Reference Guide', type: 'pdf', icon: '📄' }
-              ].map((resource, idx) => (
-                <button
-                  key={idx}
-                  className="w-full p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition text-left flex items-center justify-between group"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{resource.icon}</span>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 group-hover:text-purple-600">{resource.title}</h4>
-                      <p className="text-sm text-gray-600">{resource.type}</p>
+            <div className="space-y-8">
+              {/* Uploaded Videos Section */}
+              {topicCode && (
+                <div className="bg-white rounded-xl border border-gray-200 p-8">
+                  <h3 className="text-xl font-bold text-gray-900 mb-6">📹 Topic Videos</h3>
+                  <TopicVideos
+                    topic={topicCode}
+                    onSelectVideo={(video) => {
+                      setSelectedVideo(video);
+                      setActiveTab('lesson');
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Selected Video Player */}
+              {selectedVideo && (
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-bold text-gray-900">{selectedVideo.title}</h3>
+                      <button
+                        onClick={() => setSelectedVideo(null)}
+                        className="text-gray-600 hover:text-gray-900"
+                      >
+                        ✕
+                      </button>
                     </div>
+                    <VideoPlayer
+                      videoUrl={selectedVideo.url}
+                      duration={selectedVideo.duration_seconds}
+                      videoTitle={selectedVideo.title}
+                    />
+                    {selectedVideo.description && (
+                      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <p className="text-sm text-gray-700">{selectedVideo.description}</p>
+                      </div>
+                    )}
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-purple-600 transition" />
-                </button>
-              ))}
+                </div>
+              )}
+
+              {/* Other Resources */}
+              <div className="bg-white rounded-xl border border-gray-200 p-8">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">📚 Additional Resources</h3>
+                <div className="space-y-3">
+                  {[
+                    { title: 'Official Documentation', type: 'link', icon: '📖' },
+                    { title: 'Code Examples', type: 'code', icon: '💻' },
+                    { title: 'Reference Guide', type: 'pdf', icon: '📄' }
+                  ].map((resource, idx) => (
+                    <button
+                      key={idx}
+                      className="w-full p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition text-left flex items-center justify-between group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{resource.icon}</span>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 group-hover:text-purple-600">{resource.title}</h4>
+                          <p className="text-sm text-gray-600">{resource.type}</p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-purple-600 transition" />
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>

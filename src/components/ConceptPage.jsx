@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BookOpen, ClipboardList, Lightbulb, ChevronLeft, MessageCircle, CheckCircle2, Clock } from 'lucide-react';
 import VideoPlayer from './VideoPlayer';
 import ConceptOverview from './ConceptOverview';
@@ -173,12 +173,13 @@ export default function Counter() {
 
 export default function DataFetcher() {
   const [data, setData] = useState(null);
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
   useEffect(() => {
-    fetch('https://api.example.com/data')
+    fetch(\`\${apiBaseUrl}/api/v1/data\`)
       .then(res => res.json())
       .then(data => setData(data));
-  }, []);
+  }, [apiBaseUrl]);
 
   return <div>{data?.message}</div>;
 }`,
@@ -369,11 +370,21 @@ export default function ConceptPage({
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const lastTrackedSecondRef = useRef(-1);
 
   // Load all data on mount or when topic changes
   useEffect(() => {
     loadAllData();
-  }, [topic, course]);
+  }, [
+    topic?.id,
+    topic?.videoId,
+    topic?.assessmentId,
+    topic?.title,
+    concept?.name,
+    concept?.description,
+    course?.id,
+    course?.name
+  ]);
 
   const loadAllData = async () => {
     try {
@@ -428,11 +439,24 @@ export default function ConceptPage({
   };
 
   const handleVideoProgress = async ({ currentTime, progress }) => {
-    // Track video watch every 10 seconds
-    if (Math.floor(currentTime) % 10 === 0) {
+    const currentSecond = Math.floor(currentTime);
+    const shouldTrack =
+      currentSecond > 0 &&
+      currentSecond % 10 === 0 &&
+      currentSecond !== lastTrackedSecondRef.current;
+
+    // Track video watch once every 10 seconds.
+    if (shouldTrack) {
+      lastTrackedSecondRef.current = currentSecond;
       try {
-        if (videoData?.video?.id || topic.videoId) {
-          await trackVideoWatch(topic.videoId, studentId, Math.floor(currentTime), Math.floor(progress));
+        const trackingVideoId = topic.videoId || videoData?.video?.id;
+        if (trackingVideoId) {
+          await trackVideoWatch(
+            trackingVideoId,
+            studentId,
+            currentSecond,
+            Math.floor(progress)
+          );
         }
       } catch (err) {
         console.error('Error tracking video:', err);

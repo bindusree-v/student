@@ -1,12 +1,9 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 // ==================== ORIGINAL ENDPOINTS ====================
@@ -56,6 +53,10 @@ export const getTopicsForCourse = (courseId) => {
   return api.get(`/api/v1/topics/course/${courseId}`);
 };
 
+export const getTopics = () => {
+  return api.get('/api/v1/topics');
+};
+
 // ==================== VIDEOS ====================
 
 export const getVideo = (videoId) => {
@@ -82,6 +83,15 @@ export const getLessonVideos = (lessonId) => {
   return api.get(`/api/v1/videos/lesson/${lessonId}`);
 };
 
+export const getVideosByTopic = (topic) => {
+  return api.get(`/api/v1/videos/topic/${topic}`);
+};
+
+export const uploadVideo = (formData) => {
+  // Use a direct axios call for FormData to avoid JSON defaults.
+  return axios.post(`${API_BASE_URL}/api/v1/videos/upload`, formData);
+};
+
 // ==================== ASSESSMENTS ====================
 
 export const getAssessment = (assessmentId) => {
@@ -97,6 +107,10 @@ export const submitAssessment = (assessmentId, studentId, answers) => {
 
 export const getTopicAssessments = (topicId) => {
   return api.get(`/api/v1/assessments/topic/${topicId}`);
+};
+
+export const createAssessment = (payload) => {
+  return api.post('/api/v1/assessments/create', payload);
 };
 
 export const getStudentAssessmentResults = (studentId) => {

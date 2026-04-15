@@ -1,11 +1,11 @@
-import React, { useState, useRef } from 'react';
-import { useLearning } from '../context/LearningContext';
+import React, { useEffect, useState, useRef } from 'react';
+import { API_BASE_URL, uploadVideo } from '../api';
 
 export const UploadVideo = () => {
-  const { apiBaseUrl } = useLearning();
   const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState('');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -21,6 +21,42 @@ export const UploadVideo = () => {
     { id: 'nlp', name: 'Natural Language Processing', description: 'Text processing, tokenization, embeddings' },
     { id: 'da', name: 'Data Analysis', description: 'Data visualization, statistics, insights' }
   ];
+
+  const formatApiError = (error) => {
+    const detail = error?.response?.data?.detail;
+
+    if (Array.isArray(detail)) {
+      // FastAPI validation errors often come as an array of objects.
+      return detail
+        .map((item) => {
+          if (typeof item === 'string') return item;
+          if (item?.msg && Array.isArray(item?.loc)) {
+            return `${item.loc.join(' -> ')}: ${item.msg}`;
+          }
+          if (item?.msg) return item.msg;
+          return JSON.stringify(item);
+        })
+        .join('\n');
+    }
+
+    if (typeof detail === 'string' && detail.trim()) {
+      return detail;
+    }
+
+    if (error?.message === 'Network Error') {
+      return `Cannot reach backend at ${API_BASE_URL}. Make sure Python API is running and CORS allows http://localhost:5173.`;
+    }
+
+    return error?.message || 'Failed to upload video';
+  };
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -47,6 +83,10 @@ export const UploadVideo = () => {
         return;
       }
 
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      setPreviewUrl(URL.createObjectURL(file));
       setSelectedFile(file);
 
       // Auto-fill title if empty
@@ -78,32 +118,29 @@ export const UploadVideo = () => {
       formDataToSend.append('topic', formData.topic);
       formDataToSend.append('has_subtitles', formData.has_subtitles.toString());
 
-      const response = await fetch(`${apiBaseUrl}/api/v1/videos/upload`, {
-        method: 'POST',
-        body: formDataToSend,
-      });
+      await uploadVideo(formDataToSend);
 
-      if (response.ok) {
-        alert('Video uploaded successfully!');
-        setFormData({
-          title: '',
-          description: '',
-          duration_seconds: '',
-          topic: '',
-          has_subtitles: false,
-          resolution_options: {}
-        });
-        setSelectedFile(null);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-      } else {
-        const error = await response.json();
-        alert(`Error: ${error.detail || 'Failed to upload video'}`);
+      alert('Video uploaded successfully!');
+      setFormData({
+        title: '',
+        description: '',
+        duration_seconds: '',
+        topic: '',
+        has_subtitles: false,
+        resolution_options: {}
+      });
+      setSelectedFile(null);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl('');
+      }
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
     } catch (error) {
       console.error('Error uploading video:', error);
-      alert('Failed to upload video');
+      const message = formatApiError(error);
+      alert(`Error: ${message}`);
     } finally {
       setLoading(false);
     }
@@ -255,17 +292,26 @@ export const UploadVideo = () => {
             <div className="border-t pt-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Video Preview</h3>
               <div className="bg-gray-100 p-4 rounded-lg">
-                <div className="aspect-video bg-gray-200 rounded-lg flex items-center justify-center mb-4">
-                  <div className="text-center text-gray-500">
-                    <div className="text-4xl mb-2">🎥</div>
-                    <p>Video Preview</p>
-                    <p className="text-sm">Duration: {formData.duration_seconds ? formatDuration(parseInt(formData.duration_seconds)) : 'Not set'}</p>
+                {previewUrl ? (
+                  <video
+                    src={previewUrl}
+                    controls
+                    className="w-full aspect-video bg-black rounded-lg mb-4"
+                  />
+                ) : (
+                  <div className="aspect-video bg-gray-200 rounded-lg flex items-center justify-center mb-4">
+                    <div className="text-center text-gray-500">
+                      <div className="text-4xl mb-2">🎥</div>
+                      <p>Video Preview</p>
+                      <p className="text-sm">Preparing preview...</p>
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="space-y-2">
                   <p><strong>Title:</strong> {formData.title || 'Not set'}</p>
                   <p><strong>Topic:</strong> {availableTopics.find(t => t.id === formData.topic)?.name || 'Not selected'}</p>
                   <p><strong>File:</strong> {selectedFile.name} ({(selectedFile.size / (1024 * 1024)).toFixed(2)} MB)</p>
+                  <p><strong>Duration:</strong> {formData.duration_seconds ? formatDuration(parseInt(formData.duration_seconds)) : 'Not set'}</p>
                   <p><strong>Subtitles:</strong> {formData.has_subtitles ? 'Yes' : 'No'}</p>
                 </div>
               </div>
