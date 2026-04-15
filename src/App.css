@@ -1,0 +1,8 @@
+/* App styles - Tailwind handles most styling */
+
+@supports (display: grid) {
+  main {
+    display: grid;
+  }
+}
+

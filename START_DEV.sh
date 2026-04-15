@@ -1,0 +1,1 @@
+cd /c/AI-Powered-Adapative-Learning-System/frontend/frontend && npm run dev
